@@ -85,3 +85,4 @@ func (b *Bot) Type(channel, text string) {
 	b.RTM.SendMessage(b.RTM.NewTypingMessage(channel))
 	time.Sleep(sleepDuration)
 }
+
