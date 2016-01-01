@@ -7,3 +7,5 @@ For now, if you want to kick the tires, we would love feedback. Check out these 
 
 - [simple.go](https://github.com/BeepBoopHQ/go-slackbot/blob/master/examples/simple/simple.go)
 - [wit.go](https://github.com/BeepBoopHQ/go-slackbot/blob/master/examples/wit/wit.go).
+- 
+*commit*
