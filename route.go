@@ -110,10 +110,8 @@ type RegexpMatcher struct {
 
 func (rm *RegexpMatcher) Match(ctx context.Context) (bool, context.Context) {
 	msg := MessageFromContext(ctx)
-	// A message be receded by a direct mention. For simplicity sake, strip out any potention direct mentions first
-	text := StripDirectMention(msg.Text)
-	// now consider stripped text against regular expression
-	matched := regexp.MustCompile(rm.regex).MatchString(text)
+
+	matched := regexp.MustCompile(rm.regex).MatchString(msg.Text)
 	return matched, ctx
 }
 
