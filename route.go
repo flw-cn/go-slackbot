@@ -15,6 +15,12 @@ type Route struct {
 	botUserID    string
 }
 
+func (r *Route) SetMatchersBotID(id string) {
+	for i := range r.matchers {
+		r.matchers[i].SetBotID(id)
+	}
+}
+
 func (r *Route) setBotID(botID string) {
 	r.botUserID = botID
 	for _, matcher := range r.matchers {
@@ -167,6 +173,6 @@ func (r *Route) addTypesMatcher(types ...MessageType) error {
 		return r.err
 	}
 
-	r.AddMatcher(&TypesMatcher{types: types, botUserID: ""})
+	r.AddMatcher(&TypesMatcher{types: types, botUserID: r.botUserID})
 	return nil
 }
