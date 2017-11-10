@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"context"
@@ -15,7 +16,7 @@ func main() {
 	toMe := bot.Messages(slackbot.DirectMessage, slackbot.DirectMention).Subrouter()
 	toMe.Hear("(?i)(hi|hello).*").MessageHandler(HelloHandler)
 	bot.Hear("(?i)how are you(.*)").MessageHandler(HowAreYouHandler)
-	bot.Run()
+	bot.Run(false, nil)
 }
 
 func HelloHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {

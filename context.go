@@ -7,13 +7,17 @@ import (
 	"github.com/nlopes/slack"
 )
 
+// key is unexported so other packages cannot access these keys directly or by mimicking their values.
+// This ensures that messages and bots can only be added to or retrieved from the context via these functions.
+type key int
+
 const (
 	// BotContext is the context key for the bot context entry
-	BotContext = "__BOT_CONTEXT__"
+	BotContext = iota
 	// MessageContext is the context key for the message context entry
-	MessageContext = "__MESSAGE_CONTEXT__"
+	MessageContext
 	// NamedCaptureContextKey is the key for named captures
-	NamedCaptureContextKey = "__NAMED_CAPTURES__"
+	NamedCaptureContextKey
 )
 
 // BotFromContext creates a Bot from provided Context

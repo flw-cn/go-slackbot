@@ -56,7 +56,7 @@ func TestOnChannelJoin(t *testing.T) {
 	bot, err := NewWithOpts(WithClient(slack.New("ABCDEFG")))
 	require.NoError(t, err)
 	bot.OnChannelJoin(testChannelJoinFunc)
-	go bot.Run(false)
+	go bot.Run(false, nil)
 	defer func() {
 		s.Stop()
 		bot.Stop()
@@ -80,7 +80,7 @@ func TestOnGroupJoin(t *testing.T) {
 	bot, err := NewWithOpts(WithClient(slack.New("ABCDEFG")))
 	require.NoError(t, err)
 	bot.OnChannelJoin(testChannelJoinFunc)
-	go bot.Run(false)
+	go bot.Run(false, nil)
 	defer func() {
 		s.Stop()
 		bot.Stop()
@@ -105,7 +105,7 @@ func TestReply(t *testing.T) {
 	require.NoError(t, err)
 	tome := bot.Messages(DirectMention).Subrouter()
 	tome.Hear(`^ping$`).MessageHandler(testPingFunc)
-	go bot.Run(false)
+	go bot.Run(false, nil)
 	defer func() {
 		s.Stop()
 		bot.Stop()
@@ -125,7 +125,7 @@ func TestReplyWithTyping(t *testing.T) {
 	require.NoError(t, err)
 	tome := bot.Messages(DirectMention).Subrouter()
 	tome.Hear(`^ping$`).MessageHandler(testWithTypingPingFunc)
-	go bot.Run(false)
+	go bot.Run(false, nil)
 	defer func() {
 		s.Stop()
 		bot.Stop()
@@ -145,7 +145,7 @@ func TestReplyWithAttachment(t *testing.T) {
 	require.NoError(t, err)
 	tome := bot.Messages(DirectMention).Subrouter()
 	tome.Hear(`^ping$`).MessageHandler(testPingAttachmentFunc)
-	go bot.Run(false)
+	go bot.Run(false, nil)
 	defer func() {
 		s.Stop()
 		bot.Stop()

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -16,7 +17,7 @@ func main() {
 	toMe.AddMatcher(&IntentMatcher{intent: "hello"}).MessageHandler(HelloHandler)
 	toMe.AddMatcher(&IntentMatcher{intent: "how_are_you"}).MessageHandler(HowAreYouHandler)
 	toMe.MessageHandler(ConfusedHandler)
-	bot.Run()
+	bot.Run(false, nil)
 }
 
 func HelloHandler(ctx context.Context, bot *slackbot.Bot, msg *slack.MessageEvent) {

@@ -35,13 +35,11 @@
 package slackbot
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"time"
 
-	"context"
-	"log"
-
+	log "github.com/Sirupsen/logrus"
 	"github.com/nlopes/slack"
 )
 
@@ -51,7 +49,7 @@ const (
 	// WithoutTyping sends a message without typing indicator
 	WithoutTyping bool = false
 
-	maxTypingSleep time.Duration = time.Millisecond * 2000
+	maxTypingSleepMs time.Duration = time.Millisecond * 2000
 )
 
 var botUserID string
@@ -85,7 +83,7 @@ func NewWithOpts(opts ...BotOption) (*Bot, error) {
 		}
 	}
 	if b.logger == nil {
-		b.logger = log.New(ioutil.Discard, "slackbot - ", 1)
+		b.logger = log.New()
 	}
 	return b, nil
 }
@@ -124,19 +122,24 @@ type Bot struct {
 	// logger instance
 	logger *log.Logger
 	// Slack API
-	Client *slack.Client
-	RTM    *slack.RTM
+	Client              *slack.Client
+	RTM                 *slack.RTM
+	TalkToSelf          bool    // if set, the bot can reply to its own messages
+	TypingDelayModifier float64 // percentage increase or decrease to typing *delay*. 0 = 2ms per character, 4 = 10ms per, -0.5 = 1ms per. Max delay is 2000ms regardless.
 }
 
 // Run listens for incoming slack RTM events, matching them to an appropriate handler.
-func (b *Bot) Run(rtmopts bool) {
+func (b *Bot) Run(rtmopts bool, quitCh <-chan bool) {
+	if quitCh == nil {
+		quitCh = make(chan bool)
+	}
 
 	options := slack.RTMOptions{}
 	options.UseRTMStart = rtmopts
 
 	b.RTM = b.Client.NewRTMWithOptions(&options)
 
-	slack.SetLogger(b.logger)
+	// slack.SetLogger(b.logger)
 	go b.RTM.ManageConnection()
 	for {
 		select {
@@ -150,7 +153,7 @@ func (b *Bot) Run(rtmopts bool) {
 				botUserID = ev.Info.User.ID
 			case *slack.MessageEvent:
 				// ignore messages from the current user, the bot user
-				if b.botUserID == ev.User {
+				if !b.TalkToSelf && b.botUserID == ev.User {
 					continue
 				}
 
@@ -188,6 +191,9 @@ func (b *Bot) Run(rtmopts bool) {
 					}
 				}
 			}
+		case <-quitCh:
+			log.Debugf("Quit event received.")
+			return
 		}
 	}
 }
@@ -254,9 +260,9 @@ func (b *Bot) ReplyInThreadWithAttachments(evt *slack.MessageEvent, attachments 
 func (b *Bot) Type(evt *slack.MessageEvent, msg interface{}) {
 	msgLen := msgLen(msg)
 
-	sleepDuration := time.Minute * time.Duration(msgLen) / 3000
-	if sleepDuration > maxTypingSleep {
-		sleepDuration = maxTypingSleep
+	sleepDuration := time.Duration(float64(time.Minute*time.Duration(msgLen)/30000) * (1 + b.TypingDelayModifier))
+	if sleepDuration > maxTypingSleepMs {
+		sleepDuration = maxTypingSleepMs
 	}
 
 	b.RTM.SendMessage(b.RTM.NewTypingMessage(evt.Channel))
@@ -277,7 +283,7 @@ func (b *Bot) setBotID(ID string) {
 	}
 }
 
-// msgLen gets lenght of message and attachment messages. Unsupported types return 0.
+// msgLen gets length of message and attachment messages. Unsupported types return 0.
 func msgLen(msg interface{}) (msgLen int) {
 	switch m := msg.(type) {
 	case string:
