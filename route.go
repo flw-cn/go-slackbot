@@ -22,6 +22,7 @@ type Route struct {
 	subrouter    Router
 	preprocessor Preprocessor
 	botUserID    string
+	talkToSelf   bool // if set, the bot can reply to its own messages
 }
 
 func (r *Route) setBotID(botID string) {
@@ -59,13 +60,24 @@ func (em *EventMatch) Handle(ctx context.Context, b *Bot, ev *slack.RTMEvent) {
 
 // Match matches
 func (r *Route) Match(ctx context.Context, match *RouteMatch) (bool, context.Context) {
+	if r.err != nil {
+		return false, ctx
+	}
+
+	if r.handler == nil {
+		return false, ctx
+	}
+
+	if ev := MessageFromContext(ctx); ev != nil && !r.talkToSelf && r.botUserID == ev.User {
+		return false, ctx
+	}
+
 	if r.preprocessor != nil {
 		ctx = r.preprocessor(ctx)
 	}
 	for _, m := range r.matchers {
 		var matched bool
-		matched, ctx = m.Match(ctx)
-		if !matched {
+		if matched, ctx = m.Match(ctx); !matched {
 			return false, ctx
 		}
 	}
@@ -80,9 +92,19 @@ func (r *Route) Match(ctx context.Context, match *RouteMatch) (bool, context.Con
 	return true, ctx
 }
 
+func (r *Route) TalkToSelf() *Route {
+	r.talkToSelf = true
+	return r
+}
+
+func (r *Route) NoTalkToSelf() *Route {
+	r.talkToSelf = false
+	return r
+}
+
 // Hear adds a matcher for the message text
 func (r *Route) Hear(regex string) *Route {
-	r.err = r.addRegexpMatcher(regex)
+	r.addRegexpMatcher(regex)
 	return r
 }
 
@@ -96,6 +118,7 @@ func (r *Route) Messages(types ...MessageType) *Route {
 func (r *Route) Handler(handler Handler) *Route {
 	if r.err == nil {
 		r.handler = handler
+
 	}
 	return r
 }
@@ -111,31 +134,29 @@ func (r *Route) MessageHandler(fn MessageHandler) *Route {
 
 // Preprocess preproccesses
 func (r *Route) Preprocess(fn Preprocessor) *Route {
-	if r.err == nil {
-		r.preprocessor = fn
-	}
+	r.preprocessor = fn
 	return r
 }
 
 // Subrouter creates a subrouter
 func (r *Route) Subrouter() Router {
-	if r.err == nil {
-		r.subrouter = &SimpleRouter{}
-	}
+	r.subrouter = &SimpleRouter{err: r.err}
 	return r.subrouter
 }
 
 // AddMatcher adds a matcher to the route.
 func (r *Route) AddMatcher(m Matcher) *Route {
-	if r.err == nil {
-		r.matchers = append(r.matchers, m)
-	}
+	r.matchers = append(r.matchers, m)
 	return r
+}
+
+func (r *Route) Err() error {
+	return r.err
 }
 
 // RegexpMatcher is a regexp matcher
 type RegexpMatcher struct {
-	regex     string
+	regex     *regexp.Regexp
 	botUserID string
 }
 
@@ -145,11 +166,7 @@ func (rm *RegexpMatcher) Match(ctx context.Context) (bool, context.Context) {
 	// A message be receded by a direct mention. For simplicity sake, strip out any potention direct mentions first
 	text := StripDirectMention(msg.Text)
 	// now consider stripped text against regular expression
-	re, reErr := regexp.Compile(rm.regex)
-	if reErr != nil {
-		return false, ctx
-	}
-	matched, matches := namedRegexpParse(text, re)
+	matched, matches := namedRegexpParse(text, rm.regex)
 	if !matched {
 		return false, ctx
 	}
@@ -169,13 +186,13 @@ func (rm *RegexpMatcher) SetBotID(botID string) {
 }
 
 // addRegexpMatcher adds a host or path matcher and builder to a route.
-func (r *Route) addRegexpMatcher(regex string) error {
-	if r.err != nil {
-		return r.err
+func (r *Route) addRegexpMatcher(regex string) {
+	re, err := regexp.Compile(regex)
+	if err != nil {
+		r.err = err
 	}
 
-	r.AddMatcher(&RegexpMatcher{regex: regex})
-	return nil
+	r.AddMatcher(&RegexpMatcher{regex: re})
 }
 
 // TypesMatcher is a type matcher

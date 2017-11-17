@@ -39,8 +39,8 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/nlopes/slack"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -124,7 +124,6 @@ type Bot struct {
 	// Slack API
 	Client              *slack.Client
 	RTM                 *slack.RTM
-	TalkToSelf          bool    // if set, the bot can reply to its own messages
 	TypingDelayModifier float64 // percentage increase or decrease to typing *delay*. 0 = 2ms per character, 4 = 10ms per, -0.5 = 1ms per. Max delay is 2000ms regardless.
 }
 
@@ -144,22 +143,16 @@ func (b *Bot) Run(rtmopts bool, quitCh <-chan bool) {
 	for {
 		select {
 		case msg := <-b.RTM.IncomingEvents:
-			ctx := context.Background()
-			ctx = AddBotToContext(ctx, b)
+			ctx := AddBotToContext(context.Background(), b)
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
 				log.Printf("Connected: %#v\n", ev.Info.User)
 				b.setBotID(ev.Info.User.ID)
 				botUserID = ev.Info.User.ID
 			case *slack.MessageEvent:
-				// ignore messages from the current user, the bot user
-				if !b.TalkToSelf && b.botUserID == ev.User {
-					continue
-				}
-
 				ctx = AddMessageToContext(ctx, ev)
 				var match RouteMatch
-				if matched, newCtx := b.Match(ctx, &match); matched {
+				if matched, newCtx := b.Match(ctx, &match); matched && match.Handler != nil {
 					match.Handler(newCtx)
 				}
 			case *slack.ChannelJoinedEvent:
