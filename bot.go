@@ -51,6 +51,8 @@ const (
 	maxTypingSleepMs time.Duration = time.Millisecond * 2000
 )
 
+var botUserID string
+
 // New constructs a new Bot using the slackToken to authorize against the Slack service.
 func New(slackToken string) *Bot {
 	b := &Bot{Client: slack.New(slackToken)}
@@ -81,6 +83,7 @@ func (b *Bot) Run() {
 			case *slack.ConnectedEvent:
 				fmt.Printf("Connected: %#v\n", ev.Info.User)
 				b.setBotID(ev.Info.User.ID)
+				botUserID = ev.Info.User.ID
 			case *slack.MessageEvent:
 				// ignore messages from the current user, the bot user
 				if b.botUserID == ev.User {
@@ -144,6 +147,10 @@ func (b *Bot) BotUserID() string {
 
 func (b *Bot) setBotID(ID string) {
 	b.botUserID = ID
+
+	for _, route := range b.routes {
+		route.setBotID(ID)
+	}
 }
 
 // msgLen gets lenght of message and attachment messages. Unsupported types return 0.

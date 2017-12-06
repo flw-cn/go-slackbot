@@ -149,7 +149,7 @@ func (tm *TypesMatcher) Match(ctx context.Context) (bool, context.Context) {
 				return true, ctx
 			}
 		case DirectMention:
-			if IsDirectMention(msg, tm.botUserID) {
+			if IsDirectMention(msg, botUserID) {
 				return true, ctx
 			}
 		}
@@ -167,6 +167,6 @@ func (r *Route) addTypesMatcher(types ...MessageType) error {
 		return r.err
 	}
 
-	r.AddMatcher(&TypesMatcher{types: types, botUserID: ""})
+	r.AddMatcher(&TypesMatcher{types: types, botUserID: r.botUserID})
 	return nil
 }
