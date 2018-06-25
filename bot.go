@@ -3,10 +3,12 @@ package slackbot
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"time"
 
 	"github.com/flw-cn/slack"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -23,8 +25,22 @@ var botUserID string
 // BotOption is a functional option for configuring the bot
 type BotOption func(*Bot) error
 
+type Logger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Println(...interface{})
+
+	Fatal(...interface{})
+	Fatalf(string, ...interface{})
+	Fatalln(...interface{})
+
+	Panic(...interface{})
+	Panicf(string, ...interface{})
+	Panicln(...interface{})
+}
+
 // WithLogger sets the logger to use
-func WithLogger(l *log.Logger) BotOption {
+func WithLogger(l Logger) BotOption {
 	return func(b *Bot) error {
 		b.SetLogger(l)
 		return nil
@@ -39,35 +55,48 @@ func WithClient(c *slack.Client) BotOption {
 	}
 }
 
-// NewWithOpts creates a new bot with options
-func NewWithOpts(opts ...BotOption) (*Bot, error) {
+// NewBot constructs a new Bot using the slackToken and custom options provided
+func NewBot(slackToken string, opts ...BotOption) (*Bot, error) {
 	b := &Bot{}
+
 	for _, opt := range opts {
 		err := opt(b)
 		if err != nil {
 			return nil, err
 		}
 	}
+
 	if b.logger == nil {
-		b.logger = log.New()
+		b.logger = log.New(ioutil.Discard, "", 0)
+	}
+
+	if b.Client == nil {
+		b.Client = slack.New(slackToken)
+	}
+
+	return b, nil
+}
+
+// NewWithOpts is deprecated. Please migrate to using NewBot.
+func NewWithOpts(opts ...BotOption) (*Bot, error) {
+	fmt.Fprintln(os.Stderr, "NewWithOpts is deprecated. Please migrate to using NewBot")
+	return NewBot("", opts...)
+}
+
+// New is deprecated. Please migrate to using NewBot.
+func New(slackToken string) (*Bot, error) {
+	fmt.Fprintln(os.Stderr, "New is deprecated. Please migrate to using NewBot")
+	b, err := NewBot(slackToken)
+	if err != nil {
+		b.logger.Panicf("error creating bot: %s", err.Error())
 	}
 	return b, nil
 }
 
-// New constructs a new Bot using the slackToken to authorize against the Slack service.
-func New(slackToken string) *Bot {
-	fmt.Println("New is deprecated. Please migrate to using NewWithOpts")
-	b, err := NewWithOpts(WithClient(slack.New(slackToken)))
-	if err != nil {
-		b.logger.Panicf("error creating bot: %s", err.Error())
-	}
-	return b
-}
-
-// NewWithLogger constructs a new Bot using the slackToken and custom logger instance provided
-func NewWithLogger(slackToken string, l *log.Logger) *Bot {
-	fmt.Println("NewWithLogger is deprecated. Please migrate to using NewWithOpts")
-	b, err := NewWithOpts(WithLogger(l), WithClient(slack.New(slackToken)))
+// NewWithLogger is deprecated. Please migrate to using NewBot.
+func NewWithLogger(slackToken string, l Logger) *Bot {
+	fmt.Fprintln(os.Stderr, "NewWithLogger is deprecated. Please migrate to using NewBot")
+	b, err := NewBot(slackToken, WithLogger(l))
 	if err != nil {
 		b.logger.Panicf("error creating bot: %s", err.Error())
 	}
@@ -86,33 +115,41 @@ type Bot struct {
 	// Slack UserID of the bot UserID
 	botUserID string
 	// logger instance
-	logger *log.Logger
+	logger Logger
 	// Slack API
 	Client              *slack.Client
 	RTM                 *slack.RTM
-	TypingDelayModifier float64 // percentage increase or decrease to typing *delay*. 0 = 2ms per character, 4 = 10ms per, -0.5 = 1ms per. Max delay is 2000ms regardless.
+	typingDelayModifier float64 // percentage increase or decrease to typing *delay*. 0 = 2ms per character, 4 = 10ms per, -0.5 = 1ms per. Max delay is 2000ms regardless.
 }
 
 // Run listens for incoming slack RTM events, matching them to an appropriate handler.
-func (b *Bot) Run(rtmopts bool, quitCh <-chan bool) {
+//
+// It takes two parameters for custom its behavior,
+// if `useRTMStart` set to true, `rtm.start` to be used, else `rtm.connect` to be used.
+//
+// `quitCh` can be used for break Bot event loop.
+func (b *Bot) Run(useRTMStart bool, quitCh <-chan bool) {
 	if quitCh == nil {
 		quitCh = make(chan bool)
 	}
 
 	options := slack.RTMOptions{}
-	options.UseRTMStart = rtmopts
+	options.UseRTMStart = useRTMStart
 
 	b.RTM = b.Client.NewRTMWithOptions(&options)
 
-	// slack.SetLogger(b.logger)
+	slack.SetLogger(b.logger)
 	go b.RTM.ManageConnection()
 	for {
 		select {
+		case <-quitCh:
+			b.logger.Println("Quit event received.")
+			return
 		case msg := <-b.RTM.IncomingEvents:
 			ctx := AddBotToContext(context.Background(), b)
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
-				log.Printf("Connected: %#v\n", ev.Info.User)
+				b.logger.Printf("Connected: %#v", ev.Info.User)
 				b.setBotID(ev.Info.User.ID)
 				botUserID = ev.Info.User.ID
 			case *slack.MessageEvent:
@@ -150,15 +187,12 @@ func (b *Bot) Run(rtmopts bool, quitCh <-chan bool) {
 					}
 				}
 			}
-		case <-quitCh:
-			log.Debugf("Quit event received.")
-			return
 		}
 	}
 }
 
 // SetLogger sets the bot's logger to a custom one
-func (b *Bot) SetLogger(l *log.Logger) {
+func (b *Bot) SetLogger(l Logger) {
 	b.logger = l
 }
 
@@ -219,7 +253,7 @@ func (b *Bot) ReplyInThreadWithAttachments(evt *slack.MessageEvent, attachments 
 func (b *Bot) Type(evt *slack.MessageEvent, msg interface{}) {
 	msgLen := msgLen(msg)
 
-	sleepDuration := time.Duration(float64(time.Minute*time.Duration(msgLen)/30000) * (1 + b.TypingDelayModifier))
+	sleepDuration := time.Duration(float64(time.Minute*time.Duration(msgLen)/30000) * (1 + b.typingDelayModifier))
 	if sleepDuration > maxTypingSleepMs {
 		sleepDuration = maxTypingSleepMs
 	}
