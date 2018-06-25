@@ -70,8 +70,11 @@ type Bot struct {
 
 // Run listens for incoming slack RTM events, matching them to an appropriate handler.
 func (b *Bot) Run() {
+	fmt.Println("entering function, creating NewRTM")
 	b.RTM = b.Client.NewRTM()
+	fmt.Println("Tell RTM to ManageConnection")
 	go b.RTM.ManageConnection()
+	fmt.Println("entering for")
 	for {
 		select {
 		case msg := <-b.RTM.IncomingEvents:
@@ -79,6 +82,7 @@ func (b *Bot) Run() {
 			ctx = AddBotToContext(ctx, b)
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
+				fmt.Println("entering for")
 				fmt.Printf("Connected: %#v\n", ev.Info.User)
 				b.setBotID(ev.Info.User.ID)
 			case *slack.MessageEvent:
@@ -144,6 +148,7 @@ func (b *Bot) BotUserID() string {
 
 func (b *Bot) setBotID(ID string) {
 	b.botUserID = ID
+	b.SimpleRouter.SetBotID(ID)
 }
 
 // msgLen gets lenght of message and attachment messages. Unsupported types return 0.
