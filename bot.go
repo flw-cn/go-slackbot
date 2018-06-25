@@ -69,8 +69,13 @@ type Bot struct {
 }
 
 // Run listens for incoming slack RTM events, matching them to an appropriate handler.
-func (b *Bot) Run() {
-	b.RTM = b.Client.NewRTM()
+func (b *Bot) Run(rtmopts bool) {
+
+	options := slack.RTMOptions{}
+	options.UseRTMStart = rtmopts
+
+	b.RTM = b.Client.NewRTMWithOptions(&options)
+
 	go b.RTM.ManageConnection()
 	for {
 		select {
