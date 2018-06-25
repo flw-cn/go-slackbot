@@ -39,7 +39,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nlopes/slack"
+	"github.com/flw-cn/slack"
 	log "github.com/sirupsen/logrus"
 )
 

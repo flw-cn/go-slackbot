@@ -3,7 +3,7 @@ package slackbot
 import (
 	"context"
 
-	"github.com/nlopes/slack"
+	"github.com/flw-cn/slack"
 )
 
 // MessageType represents a message type

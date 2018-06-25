@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/flw-cn/slack"
 	slacktest "github.com/lusis/slack-test"
-	"github.com/nlopes/slack"
 	"github.com/stretchr/testify/require"
 )
 

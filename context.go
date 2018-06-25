@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nlopes/slack"
+	"github.com/flw-cn/slack"
 )
 
 // key is unexported so other packages cannot access these keys directly or by mimicking their values.
