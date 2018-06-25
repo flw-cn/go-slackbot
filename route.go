@@ -165,6 +165,6 @@ func (r *Route) addTypesMatcher(types ...MessageType) error {
 		return r.err
 	}
 
-	r.AddMatcher(&TypesMatcher{types: types, botUserID: ""})
+	r.AddMatcher(&TypesMatcher{types: types, botUserID: r.botUserID})
 	return nil
 }
