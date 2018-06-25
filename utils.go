@@ -2,6 +2,7 @@ package slackbot
 
 import (
 	"regexp"
+
 	"github.com/nlopes/slack"
 )
 

@@ -1,7 +1,7 @@
 ## go-slackbot - Build Slackbots in Go
 
 The go-slackbot project hopes to ease development of Slack bots by adding helpful
-methods and a mux-router style interface to the github.com/nlopes/slack package.
+methods and a mux-router style interface to the github.com/essentialkaos/slack package.
 
 Incoming Slack RTM events are mapped to a handler in the following form:
 

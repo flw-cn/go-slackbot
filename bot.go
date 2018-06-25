@@ -1,5 +1,5 @@
 // Package slackbot hopes to ease development of Slack bots by adding helpful
-// methods and a mux-router style interface to the github.com/nlopes/slack package.
+// methods and a mux-router style interface to the github.com/essentialkaos/slack package.
 //
 // Incoming Slack RTM events are mapped to a handler in the following form:
 // 	bot.Hear("(?i)how are you(.*)").MessageHandler(HowAreYouHandler)
@@ -25,7 +25,7 @@
 //		bot.ReplyWithAttachments(evt, attachments, slackbot.WithTyping)
 //	}
 //
-// The slackbot package exposes  github.com/nlopes/slack RTM and Client objects
+// The slackbot package exposes  github.com/essentialkaos/slack RTM and Client objects
 // enabling a consumer to interact with the lower level package directly:
 // 	func HowAreYouHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 // 		bot.RTM.NewOutgoingMessage("Hello", "#random")
@@ -129,6 +129,33 @@ func (b *Bot) Reply(evt *slack.MessageEvent, msg string, typing bool) {
 func (b *Bot) ReplyWithAttachments(evt *slack.MessageEvent, attachments []slack.Attachment, typing bool) {
 	params := slack.PostMessageParameters{AsUser: true}
 	params.Attachments = attachments
+
+	b.Client.PostMessage(evt.Msg.Channel, "", params)
+}
+
+// ReplyAsThread
+func (b *Bot) ReplyInThread(evt *slack.MessageEvent, msg string, typing bool) {
+	params := slack.PostMessageParameters{AsUser: true}
+
+	if evt.ThreadTimestamp == "" {
+		params.ThreadTimestamp = evt.Timestamp
+	} else {
+		params.ThreadTimestamp = evt.ThreadTimestamp
+	}
+
+	b.Client.PostMessage(evt.Msg.Channel, msg, params)
+}
+
+// ReplyInThreadWithAttachments replys to a message event inside a thread with a Slack Attachments message.
+func (b *Bot) ReplyInThreadWithAttachments(evt *slack.MessageEvent, attachments []slack.Attachment, typing bool) {
+	params := slack.PostMessageParameters{AsUser: true}
+	params.Attachments = attachments
+
+	if evt.ThreadTimestamp == "" {
+		params.ThreadTimestamp = evt.Timestamp
+	} else {
+		params.ThreadTimestamp = evt.ThreadTimestamp
+	}
 
 	b.Client.PostMessage(evt.Msg.Channel, "", params)
 }
