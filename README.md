@@ -29,7 +29,7 @@ In addition to several useful functions in the utils.go file, the slackbot.Bot s
 		attachments := []slack.Attachment{attachment}
 		bot.ReplyWithAttachments(evt, attachments, slackbot.WithTyping)
 	}
-  
+
 But wait, there's more! Well, until there's more, the slackbot package exposes github.com/nlopes/slack RTM and Client objects enabling a consumer to interact with the lower level package directly:
 
     func HowAreYouHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
