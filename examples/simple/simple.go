@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"golang.org/x/net/context"
+	"context"
 
 	slackbot "github.com/BeepBoopHQ/go-slackbot"
 	"github.com/nlopes/slack"

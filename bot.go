@@ -40,16 +40,18 @@ import (
 	"log"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/nlopes/slack"
 )
 
 const (
-	WithTyping    bool = true
+	// WithTyping sends a message with typing indicator
+	WithTyping bool = true
+	// WithoutTyping sends a message without typing indicator
 	WithoutTyping bool = false
 
-	maxTypingSleepMs time.Duration = time.Millisecond * 2000
+	maxTypingSleep time.Duration = time.Millisecond * 2000
 )
 
 var botUserID string
@@ -60,10 +62,15 @@ func New(slackToken string) *Bot {
 	return b
 }
 
+// Bot is a bot
 type Bot struct {
 	SimpleRouter
 	// Routes to be matched, in order.
 	routes []*Route
+	// unhandledEventsHandlers are event handlers for unknown events
+	unhandledEventsHandlers []EventHandler
+	// channelJoinEventsHandlers are event handlers for channel join events
+	channelJoinEventsHandlers []ChannelJoinHandler
 	// Slack UserID of the bot UserID
 	botUserID string
 	// Slack API
@@ -98,12 +105,25 @@ func (b *Bot) Run(rtmopts bool) {
 
 				ctx = AddMessageToContext(ctx, ev)
 				var match RouteMatch
-				if matched, ctx := b.Match(ctx, &match); matched {
-					match.Handler(ctx)
+				if matched, newCtx := b.Match(ctx, &match); matched {
+					match.Handler(newCtx)
 				}
-
-			case *slack.RTMError:
-				log.Printf("Error: %s\n", ev.Error())
+			case *slack.ChannelJoinedEvent:
+				if len(b.channelJoinEventsHandlers) > 0 {
+					for _, h := range b.channelJoinEventsHandlers {
+						var handler ChannelJoinMatch
+						handler.Handler = h
+						go handler.Handle(ctx, b, &ev.Channel)
+					}
+				}
+			case *slack.GroupJoinedEvent:
+				if len(b.channelJoinEventsHandlers) > 0 {
+					for _, h := range b.channelJoinEventsHandlers {
+						var handler ChannelJoinMatch
+						handler.Handler = h
+						go handler.Handle(ctx, b, &ev.Channel)
+					}
+				}
 
 			case *slack.InvalidAuthEvent:
 				log.Printf("Invalid credentials")
@@ -111,10 +131,15 @@ func (b *Bot) Run(rtmopts bool) {
 
 			default:
 				// Ignore other events..
-				// log.Printf("Unexpected: %v\n", msg.Data)
+				// fmt.Printf("Unexpected: %v\n", msg.Data)
 			}
 		}
 	}
+}
+
+// OnChannelJoin handles ChannelJoin events
+func (b *Bot) OnChannelJoin(h ChannelJoinHandler) {
+	b.channelJoinEventsHandlers = append(b.channelJoinEventsHandlers, h)
 }
 
 // Reply replies to a message event with a simple message.
@@ -130,7 +155,7 @@ func (b *Bot) ReplyWithAttachments(evt *slack.MessageEvent, attachments []slack.
 	params := slack.PostMessageParameters{AsUser: true}
 	params.Attachments = attachments
 
-	b.Client.PostMessage(evt.Msg.Channel, "", params)
+	_, _, _ = b.Client.PostMessage(evt.Msg.Channel, "", params)
 }
 
 // ReplyAsThread
@@ -165,15 +190,15 @@ func (b *Bot) Type(evt *slack.MessageEvent, msg interface{}) {
 	msgLen := msgLen(msg)
 
 	sleepDuration := time.Minute * time.Duration(msgLen) / 3000
-	if sleepDuration > maxTypingSleepMs {
-		sleepDuration = maxTypingSleepMs
+	if sleepDuration > maxTypingSleep {
+		sleepDuration = maxTypingSleep
 	}
 
 	b.RTM.SendMessage(b.RTM.NewTypingMessage(evt.Channel))
 	time.Sleep(sleepDuration)
 }
 
-// Fetch the botUserID.
+// BotUserID fetches the botUserID.
 func (b *Bot) BotUserID() string {
 	return b.botUserID
 }
