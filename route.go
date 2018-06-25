@@ -147,7 +147,7 @@ func (tm *TypesMatcher) Match(ctx context.Context) (bool, context.Context) {
 				return true, ctx
 			}
 		case DirectMention:
-			if IsDirectMention(msg, tm.botUserID) {
+			if IsDirectMention(msg, botUserID) {
 				return true, ctx
 			}
 		}
