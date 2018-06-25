@@ -37,6 +37,7 @@ package slackbot
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"golang.org/x/net/context"
@@ -84,7 +85,7 @@ func (b *Bot) Run(rtmopts bool) {
 			ctx = AddBotToContext(ctx, b)
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
-				fmt.Printf("Connected: %#v\n", ev.Info.User)
+				log.Printf("Connected: %#v\n", ev.Info.User)
 				b.setBotID(ev.Info.User.ID)
 			case *slack.MessageEvent:
 				// ignore messages from the current user, the bot user
@@ -99,15 +100,15 @@ func (b *Bot) Run(rtmopts bool) {
 				}
 
 			case *slack.RTMError:
-				fmt.Printf("Error: %s\n", ev.Error())
+				log.Printf("Error: %s\n", ev.Error())
 
 			case *slack.InvalidAuthEvent:
-				fmt.Printf("Invalid credentials")
+				log.Printf("Invalid credentials")
 				break
 
 			default:
 				// Ignore other events..
-				// fmt.Printf("Unexpected: %v\n", msg.Data)
+				// log.Printf("Unexpected: %v\n", msg.Data)
 			}
 		}
 	}
