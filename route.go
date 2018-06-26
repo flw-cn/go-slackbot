@@ -8,12 +8,6 @@ import (
 	"github.com/flw-cn/slack"
 )
 
-type contextKey string
-
-func (c contextKey) String() string {
-	return string(c)
-}
-
 // Route represents a route
 type Route struct {
 	handler      Handler
@@ -175,7 +169,7 @@ func (rm *RegexpMatcher) Match(ctx context.Context) (bool, context.Context) {
 	for k, v := range matches {
 		namedCaptures.m[k] = v
 	}
-	newCtx := context.WithValue(ctx, contextKey(NamedCaptureContextKey), namedCaptures)
+	newCtx := context.WithValue(ctx, namedCaptureContext, namedCaptures)
 
 	return true, newCtx
 }
