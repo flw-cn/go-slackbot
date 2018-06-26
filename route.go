@@ -58,7 +58,7 @@ func (r *Route) Match(ctx context.Context, match *RouteMatch) (bool, context.Con
 		return false, ctx
 	}
 
-	if r.handler == nil {
+	if r.handler == nil && r.subrouter == nil {
 		return false, ctx
 	}
 
@@ -184,6 +184,7 @@ func (r *Route) addRegexpMatcher(regex string) {
 	re, err := regexp.Compile(regex)
 	if err != nil {
 		r.err = err
+		return
 	}
 
 	r.AddMatcher(&RegexpMatcher{regex: re})
@@ -198,14 +199,23 @@ type TypesMatcher struct {
 // Match matches
 func (tm *TypesMatcher) Match(ctx context.Context) (bool, context.Context) {
 	msg := MessageFromContext(ctx)
+	bot := BotFromContext(ctx)
 	for _, t := range tm.types {
 		switch t {
 		case DirectMessage:
-			if IsDirectMessage(msg) {
+			if IsDirectMessage(bot.RTM, msg) {
 				return true, ctx
 			}
 		case DirectMention:
-			if IsDirectMention(msg, botUserID) {
+			if IsDirectMention(bot.RTM, msg, botUserID) {
+				return true, ctx
+			}
+		case Message:
+			if IsMessage(bot.RTM, msg) {
+				return true, ctx
+			}
+		case Mention:
+			if IsMentioned(msg, botUserID) {
 				return true, ctx
 			}
 		}

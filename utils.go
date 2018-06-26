@@ -16,22 +16,22 @@ func StripDirectMention(text string) string {
 }
 
 // IsDirectMessage returns true if this message is in a direct message conversation
-func IsDirectMessage(evt *slack.MessageEvent) bool {
-	r, rErr := regexp.Compile("^D.*")
-	if rErr != nil {
-		return false
-	}
-	return r.MatchString(evt.Channel)
+func IsDirectMessage(rtm *slack.RTM, evt *slack.MessageEvent) bool {
+	im := rtm.GetInfo().GetIMByID(evt.Channel)
+	return im != nil
 }
 
 // IsDirectMention returns true is message is a Direct Mention that mentions a specific user. A
 // direct mention is a mention at the very beginning of the message
-func IsDirectMention(evt *slack.MessageEvent, userID string) bool {
-	r, rErr := regexp.Compile("^<@" + userID + ">.*")
-	if rErr != nil {
-		return false
-	}
-	return r.MatchString(evt.Text)
+func IsDirectMention(rtm *slack.RTM, evt *slack.MessageEvent, userID string) bool {
+	return IsDirectMessage(rtm, evt) && IsMentioned(evt, userID)
+}
+
+// IsMessage returns true if this message is in a channel/group conversation
+func IsMessage(rtm *slack.RTM, evt *slack.MessageEvent) bool {
+	ch := rtm.GetInfo().GetChannelByID(evt.Channel)
+	gp := rtm.GetInfo().GetGroupByID(evt.Channel)
+	return ch != nil || gp != nil
 }
 
 // IsMentioned returns true if this message contains a mention of a specific user

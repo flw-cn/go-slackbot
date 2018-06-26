@@ -7,17 +7,14 @@ import (
 )
 
 // MessageType represents a message type
-type MessageType string
+type MessageType int
 
 const (
-	// DirectMessage represents a message type
-	DirectMessage MessageType = "direct_message"
-	// DirectMention represents a direct message
-	DirectMention MessageType = "direct_mention"
-	// Mention is a mention
-	Mention MessageType = "mention"
-	// Ambient is ambient
-	Ambient MessageType = "ambient"
+	DirectMessage MessageType = iota // someone message me one by one
+	DirectMention                    // someone mention me in a DirectMessage
+	Message                          // normal message, just like channel chat message
+	Mention                          // someone mention me in a Message
+	Ambient                          // what?
 )
 
 // Handler is a handler
