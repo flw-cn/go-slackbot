@@ -138,7 +138,8 @@ func (b *Bot) Run(useRTMStart bool, quitCh <-chan bool) {
 
 	b.RTM = b.Client.NewRTMWithOptions(&options)
 
-	slack.SetLogger(b.logger)
+	// TODO: block by https://github.com/nlopes/slack/issues/344
+	// slack.SetLogger(b.logger)
 	go b.RTM.ManageConnection()
 	for {
 		select {
