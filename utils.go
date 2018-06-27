@@ -55,6 +55,12 @@ func IsMention(evt *slack.MessageEvent) bool {
 	return len(results) > 0
 }
 
+// IsFileShared returns true the message has `file_shared` type
+func IsFileShared(evt *slack.MessageEvent) bool {
+	// FIXME: return evt.Type == "file_shared"
+	return evt.SubType == "file_share"
+}
+
 // WhoMentioned returns a list of userIDs mentioned in the message
 func WhoMentioned(evt *slack.MessageEvent) []string {
 	r, rErr := regexp.Compile(`<@(U[a-zA-Z0-9]+)>`)

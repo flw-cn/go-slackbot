@@ -15,6 +15,7 @@ const (
 	Message                          // normal message, just like channel chat message
 	Mention                          // someone mention me in a Message
 	Ambient                          // what?
+	FileShared                       // someone shared a file
 )
 
 // Handler is a handler

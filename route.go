@@ -219,6 +219,10 @@ func (tm *TypesMatcher) Match(ctx context.Context) (bool, context.Context) {
 			if IsMentioned(msg, botUserID) {
 				return true, ctx
 			}
+		case FileShared:
+			if IsFileShared(msg) {
+				return true, ctx
+			}
 		}
 	}
 	return false, ctx
