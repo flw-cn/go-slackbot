@@ -2,6 +2,7 @@ package slackbot
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/flw-cn/slack"
 )
@@ -17,14 +18,18 @@ func StripDirectMention(text string) string {
 
 // IsDirectMessage returns true if this message is in a direct message conversation
 func IsDirectMessage(rtm *slack.RTM, evt *slack.MessageEvent) bool {
-	im := rtm.GetInfo().GetIMByID(evt.Channel)
-	return im != nil
+	return strings.HasPrefix(evt.Channel, "D")
 }
 
-// IsDirectMention returns true is message is a Direct Mention that mentions a specific user. A
-// direct mention is a mention at the very beginning of the message
+// IsDirectMention returns true is message is a Direct Mention that mentions a specific user.
+// A direct mention is a mention at the very beginning of the message
 func IsDirectMention(rtm *slack.RTM, evt *slack.MessageEvent, userID string) bool {
-	return IsDirectMessage(rtm, evt) && IsMentioned(evt, userID)
+	r, err := regexp.Compile(`^\s*<@` + userID + `>`)
+	if err != nil {
+		return false
+	}
+
+	return r.MatchString(evt.Text)
 }
 
 // IsMessage returns true if this message is in a channel/group conversation
